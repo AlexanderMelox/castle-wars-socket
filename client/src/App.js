@@ -2,7 +2,8 @@ import React from 'react';
 import styled from 'styled-components';
 
 import GlobalStyle from './components/GlobalStyle';
-import Header from './components/header/Header';
+import Header from './components/header';
+import Battlefield from './components/battlefield';
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <GlobalStyle />
       <AppContainer>
         <Header />
+        <Battlefield />
       </AppContainer>
     </>
   );

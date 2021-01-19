@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components/macro';
+import { resourceColorMap } from '../utils';
 import usePreviousState from '../hooks/usePreviousState';
 
 import cardIcons from '../assets/cardIcons';
@@ -117,13 +118,6 @@ export const Player = styled.h2`
     transform: scale(1.1);
     border-bottom: 3px solid red;`};
 `;
-
-const resourceColorMap = {
-  bricks: `var(--color-building)`,
-  weapons: `var(--color-weapons)`,
-  magic: `var(--color-magic)`,
-  hp: `var(--color-hp)`,
-};
 
 export const ResourceBlock = styled.div`
   align-self: stretch;

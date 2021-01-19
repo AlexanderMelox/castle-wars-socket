@@ -1,24 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
 import PlayerResources from '../PlayerResources';
 import Castle from '../Castle';
+import { createHand } from '../../utils';
 
-import cards from '../../assets/cards';
-
-// Gets a random card from the deck
-const newCard = () => cards[Math.floor(Math.random() * cards.length)];
-
-// Create a hand for a player
-const createHand = () => {
-  const newHand = [];
-  for (let i = 0; i < 8; i++) {
-    newHand.push(newCard());
-  }
-  return newHand;
-};
+import Cards from '../Cards';
 
 const Battlefield = () => {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isGameOver] = useState(false);
+  const [turnIsInProgress] = useState(false);
   const [activePlayer, setActivePlayer] = useState(0);
   const [players, setPlayers] = useState([
     {
@@ -53,6 +44,8 @@ const Battlefield = () => {
     setIsPlaying(true);
   };
 
+  const showCards = useMemo(() => isPlaying, [isPlaying]);
+
   return (
     <BattlefieldContainer>
       {!isPlaying && (
@@ -84,7 +77,9 @@ const Battlefield = () => {
           </>
         )}
       </BattlefieldTop>
-      <BattlefieldBottom>cards</BattlefieldBottom>
+      <BattlefieldBottom>
+        {showCards && <Cards cards={players[activePlayer].cards} resources={players[activePlayer].resources} />}
+      </BattlefieldBottom>
     </BattlefieldContainer>
   );
 };

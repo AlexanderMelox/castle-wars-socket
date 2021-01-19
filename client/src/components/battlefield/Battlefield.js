@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import PlayerResources from '../PlayerResources';
+import Castle from '../Castle';
 
 import cards from '../../assets/cards';
 
@@ -78,6 +79,8 @@ const Battlefield = () => {
               castleHealth={players[1].castleHealth}
               gateHealth={players[1].gateHealth}
             />
+            <Castle player="Player 1" castleHealth={players[0].castleHealth} gateHealth={players[0].gateHealth} />
+            <Castle player="Player 2" castleHealth={players[1].castleHealth} gateHealth={players[1].gateHealth} />
           </>
         )}
       </BattlefieldTop>

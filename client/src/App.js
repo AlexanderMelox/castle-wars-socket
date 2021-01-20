@@ -5,7 +5,8 @@ import GlobalStyle from './components/GlobalStyle';
 import Header from './components/header';
 import Battlefield from './components/battlefield';
 
-function App() {
+const App = () => {
+
   return (
     <>
       <GlobalStyle />

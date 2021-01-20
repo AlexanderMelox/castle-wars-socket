@@ -15,7 +15,7 @@ const startingUpdated = {
   gateHealth: '',
 };
 
-const PlayerResources = ({ player, isActivePlayer, resources, castleHealth, gateHealth }) => {
+const PlayerResources = ({ player, isActivePlayer, resources, castleHealth, gateHealth, id }) => {
   const [updated, setUpdated] = useState(startingUpdated);
 
   const resetUpdates = () => setUpdated(startingUpdated);
@@ -23,7 +23,7 @@ const PlayerResources = ({ player, isActivePlayer, resources, castleHealth, gate
   // TODO: need to add updating steps and timeouts
 
   return (
-    <Resources $isPlayerOne={player === 'Player 1'} $isActivePlayer={isActivePlayer}>
+    <Resources $isPlayerOne={id === 0} $isActivePlayer={isActivePlayer}>
       <Player $isActivePlayer={isActivePlayer}>{player}</Player>
       <ResourceBlock $type="bricks">
         <ResourceDetails>

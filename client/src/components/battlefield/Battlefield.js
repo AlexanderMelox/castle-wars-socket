@@ -43,6 +43,7 @@ const Battlefield = () => {
     },
   ]);
 
+  // Returns a mutable copy of the players array
   const copyPlayersState = () => [...players];
 
   // Methods
@@ -55,9 +56,11 @@ const Battlefield = () => {
   };
 
   const addResources = () => {
-    players[activePlayer].resources.bricks += players[activePlayer].resources.builders;
-    players[activePlayer].resources.weapons += players[activePlayer].resources.soldiers;
-    players[activePlayer].resources.crystals += players[activePlayer].resources.magic;
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].resources.bricks += playersCopy[activePlayer].resources.builders;
+    playersCopy[activePlayer].resources.weapons += playersCopy[activePlayer].resources.soldiers;
+    playersCopy[activePlayer].resources.crystals += playersCopy[activePlayer].resources.magic;
+    setPlayers(playersCopy);
   };
 
   const checkIfGameIsOver = () => {
@@ -219,7 +222,7 @@ const Battlefield = () => {
         <BattlefieldTop>
           {isPlaying && (
             <>
-              <SkipButton onClick={() => curse()}>Skip turn</SkipButton>
+              <SkipButton onClick={skipTurn}>Skip turn</SkipButton>
               <PlayerResources
                 player="Player 1"
                 isActivePlayer={activePlayer === 0}

@@ -1,14 +1,16 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useContext } from 'react';
 import styled from 'styled-components';
 import icons from '../assets/cardIcons';
 import { resourceColorMap } from '../utils';
+import { CardsContext } from './battlefield';
 
 const Card = ({ card, resources }) => {
+  const { onCardClick } = useContext(CardsContext);
   const cantUse = useMemo(() => card.cost > resources, [resources, card.cost]);
   const isCrushType = useMemo(() => card.name.includes('crush'), [card.name]);
 
   return (
-    <StyledCard $type={card.type} $cantUse={cantUse}>
+    <StyledCard onClick={() => onCardClick(card)} $type={card.type} $cantUse={cantUse}>
       <ResourceType src={icons[card.type]} />
       <Cost>{card.cost}</Cost>
       <Body>

@@ -12,6 +12,15 @@ export const createHand = () => {
   return newHand;
 };
 
+export const getResourcesArray = () => {
+  return ['bricks', 'weapons', 'crystals'];
+};
+
+export const getOpponent = (activePlayer) => {
+  const opponent = activePlayer === 0 ? 1 : 0;
+  return opponent;
+};
+
 export const resourceColorMap = {
   bricks: `var(--color-building)`,
   weapons: `var(--color-weapons)`,

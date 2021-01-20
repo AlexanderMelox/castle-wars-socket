@@ -19,7 +19,9 @@ app.ws('/websocket', (ws, req) => {
     }
     
     const room = rooms[roomId];
+
     let user = room.users.find(user => user.name === name);
+    
     // add user if not in room
     if (!user) {
       user = { name, ws, gameData, roomId, id };
@@ -33,6 +35,8 @@ app.ws('/websocket', (ws, req) => {
       console.log(room);
       console.log('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%');
       ws.send(JSON.stringify({users: room.users.map(u => _.omit(u, 'ws'))}));
+    } else if (room.users.length > 0) {
+      
     }
 
     // if (room) {
@@ -56,6 +60,13 @@ app.ws('/websocket', (ws, req) => {
       }
     });
   });
+
+
+
+
+
+
+
 
   // user disconnect
   ws.on('close', function close() {

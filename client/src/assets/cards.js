@@ -1,3 +1,5 @@
+import React from 'react';
+
 const cards = [
   {
     name: 'archer',
@@ -93,7 +95,13 @@ const cards = [
     name: 'reserve',
     type: 'bricks',
     cost: 3,
-    description: 'castle +8<br>fence -4',
+    description: (
+      <>
+        castle +8
+        <br />
+        fence -4
+      </>
+    ),
   },
   {
     name: 'babylon',
@@ -111,7 +119,13 @@ const cards = [
     name: 'wain',
     type: 'bricks',
     cost: 10,
-    description: 'castle +8<br>enemy castle -4',
+    description: (
+      <>
+        castle +8
+        <br />
+        enemy castle -4
+      </>
+    ),
   },
   {
     name: 'wall',
@@ -177,8 +191,14 @@ const cards = [
     name: 'curse',
     type: 'crystals',
     cost: 45,
-    description: 'all +1<br>enemies all -1',
+    description: (
+      <>
+        all +1
+        <br />
+        enemies all -1
+      </>
+    ),
   },
-]
+];
 
-export default cards
+export default cards;

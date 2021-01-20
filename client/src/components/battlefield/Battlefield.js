@@ -1,27 +1,22 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useMemo, useEffect, createContext, useRef } from 'react';
 import styled, { css } from 'styled-components';
 import PlayerResources from '../PlayerResources';
 import Castle from '../Castle';
+import { createHand, getResourcesArray, getOpponent } from '../../utils';
+import Cards from '../Cards';
 
-import cards from '../../assets/cards';
 import buildSocketUrl from '../../utils/buildSocketUrl';
 
-// Gets a random card from the deck
-const newCard = () => cards[Math.floor(Math.random() * cards.length)];
-
-// Create a hand for a player
-const createHand = () => {
-  const newHand = [];
-  for (let i = 0; i < 8; i++) {
-    newHand.push(newCard());
-  }
-  return newHand;
-};
+export const CardsContext = createContext();
+const turnDelay = 1600;
 
 const Battlefield = () => {
   const [socketPlayers, setSocketPlayers] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isGameOver, setIsGameOver] = useState(false);
+  const [turnIsInProgress] = useState(false);
   const [activePlayer, setActivePlayer] = useState(0);
+  const opponent = useMemo(() => getOpponent(activePlayer), [activePlayer]);
   const [players, setPlayers] = useState([
     {
       resources: {
@@ -55,6 +50,10 @@ const Battlefield = () => {
   const [username, setUsername] = useState('');
   const socket = useRef(null);
 
+  // Returns a mutable copy of the players array
+  const copyPlayersState = () => [...players];
+
+  // Methods
   const startGame = () => {
     setIsPlaying(true);
   };
@@ -108,30 +107,191 @@ const Battlefield = () => {
   console.log({players});
   console.log({socketPlayers});
 
+          
+  const switchPlayer = () => {
+    setActivePlayer(activePlayer === 0 ? 1 : 0);
+  };
+
+  const addResources = () => {
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].resources.bricks += playersCopy[activePlayer].resources.builders;
+    playersCopy[activePlayer].resources.weapons += playersCopy[activePlayer].resources.soldiers;
+    playersCopy[activePlayer].resources.crystals += playersCopy[activePlayer].resources.magic;
+    setPlayers(playersCopy);
+  };
+
+  const checkIfGameIsOver = () => {
+    if (players[1].castleHealth <= 0 || players[0].castleHealth >= 100) {
+      setIsGameOver(true);
+      alert('Congratulations Player 1 Won!');
+    } else if (players[0].castleHealth <= 0 || players[1].castleHealth >= 100) {
+      setIsGameOver(true);
+      alert('Congratulations Player 2 Won!');
+    }
+  };
+
+  const skipTurn = () => {
+    addResources();
+    switchPlayer();
+  };
+
+  const showCards = useMemo(() => isPlaying, [isPlaying]);
+
+  // card actions
+  const thief = () => {
+    const playersCopy = copyPlayersState();
+    // 1. Creates an array of resources
+    const resourcesArray = getResourcesArray();
+    // 2. Loops through each resource and deducts 5
+    resourcesArray.forEach((resource) => {
+      // Deduct resources from enemy
+      if (playersCopy[opponent].resources[resource] < 5) {
+        playersCopy[opponent].resources[resource] = 0;
+      } else {
+        playersCopy[opponent].resources[resource] -= 5;
+      }
+      // Adds it to the active player
+      playersCopy[activePlayer].resources[resource] += 5;
+    });
+    setPlayers(playersCopy);
+  };
+
+  const swat = () => {
+    const playersCopy = copyPlayersState();
+    playersCopy[opponent].castleHealth -= 10;
+    setPlayers(playersCopy);
+  };
+
+  const saboteur = () => {
+    const playersCopy = copyPlayersState();
+    const resourcesArray = getResourcesArray();
+    resourcesArray.forEach((resource) => {
+      if (playersCopy[opponent].resources[resource] <= 4) {
+        playersCopy[opponent].resources[resource] = 0;
+      } else {
+        playersCopy[opponent].resources[resource] -= 4;
+      }
+    });
+    setPlayers(playersCopy);
+  };
+
+  const attack = (player, dmg) => {
+    const playersCopy = copyPlayersState();
+    if (playersCopy[player].gateHealth <= 0) {
+      playersCopy[player].castleHealth -= dmg;
+    } else if (playersCopy[player].gateHealth < dmg) {
+      const diff = dmg - playersCopy[player].gateHealth;
+      playersCopy[player].gateHealth = 0;
+      playersCopy[player].castleHealth -= diff;
+    } else {
+      playersCopy[player].gateHealth -= dmg;
+    }
+    setPlayers(playersCopy);
+  };
+
+  const hire = (type) => {
+    // hires a builder, soldier or magician
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].resources[type] += 1;
+    setPlayers(playersCopy);
+  };
+
+  const addToFence = (amount) => {
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].gateHealth += amount;
+    setPlayers(playersCopy);
+  };
+
+  const addToCastle = (amount) => {
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].castleHealth += amount;
+    setPlayers(playersCopy);
+  };
+
+  const reserve = () => {
+    // +8 to the castle health and -4 on gate health
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].castleHealth += 8;
+    if (playersCopy[activePlayer].gateHealth < 4) {
+      playersCopy[activePlayer].gateHealth = 0;
+    } else {
+      playersCopy[activePlayer].gateHealth -= 4;
+    }
+    setPlayers(playersCopy);
+  };
+
+  const wain = () => {
+    // +8 castle and -4 castle on enemy
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].castleHealth += 8;
+    playersCopy[opponent].castleHealth -= 4;
+    setPlayers(playersCopy);
+  };
+
+  const conjure = (type) => {
+    const playersCopy = copyPlayersState();
+    playersCopy[activePlayer].resources[type] += 8;
+    setPlayers(playersCopy);
+  };
+
+  const curse = () => {
+    const playersCopy = copyPlayersState();
+    const resourcesArray = Object.keys(playersCopy[activePlayer].resources);
+
+    // add +1 to active player
+    resourcesArray.forEach((resource) => {
+      playersCopy[activePlayer].resources[resource] += 1;
+      // remove -1 from the opponent
+      if (playersCopy[opponent].resources[resource] > 0) {
+        playersCopy[opponent].resources[resource] -= 1;
+      }
+    });
+    setPlayers(playersCopy);
+  };
+
+  const cardActions = {
+    thief,
+    swat,
+    saboteur,
+    attack,
+    hire,
+    addToFence,
+    addToCastle,
+    reserve,
+    wain,
+    conjure,
+    curse,
+  };
+
+  const onCardClick = (card) => {
+    console.log(card);
+  };
+
   return (
-    <BattlefieldContainer>
-      {!isPlaying && (
-        <BattlefieldMenu>
-          <RoomNameInput
-            placeholder="Enter username"
-            type="text"
-            value={username}
-            onChange={event => setUsername(event.target.value)}
-          />
-          <RoomNameInput
-            placeholder="Enter room name"
-            type="text"
-            value={roomname}
-            onChange={event => setRoomname(event.target.value)}
-          />
-          <BattlefieldButtons disabled={!username.length || !roomname.length} onClick={startGame}>Play</BattlefieldButtons>
-          <BattlefieldButtons>How to Play</BattlefieldButtons>
-        </BattlefieldMenu>
-      )}
-      <BattlefieldTop>
-        {isPlaying && (socketPlayers && socketPlayers.length) && (
-          <>
-            {socketPlayers && socketPlayers.length && (
+    <CardsContext.Provider value={{ cardActions, activePlayer, onCardClick }}>
+      <BattlefieldContainer>
+        {!isPlaying && (
+          <BattlefieldMenu>
+            <RoomNameInput
+              placeholder="Enter username"
+              type="text"
+              value={username}
+              onChange={event => setUsername(event.target.value)}
+            />
+            <RoomNameInput
+              placeholder="Enter room name"
+              type="text"
+              value={roomname}
+              onChange={event => setRoomname(event.target.value)}
+            />
+            <BattlefieldButtons disabled={!username.length || !roomname.length} onClick={startGame}>Play</BattlefieldButtons>
+            <BattlefieldButtons>How to Play</BattlefieldButtons>
+          </BattlefieldMenu>
+        )}
+        <BattlefieldTop>
+          {isPlaying && (socketPlayers && socketPlayers.length) && (
+            <>
+              {socketPlayers && socketPlayers.length && (
               <RoomLabel>Room: {socketPlayers[0].roomId}</RoomLabel>
             )}
             <SkipButton>Skip turn</SkipButton>
@@ -153,11 +313,14 @@ const Battlefield = () => {
             />
             <Castle player="Player 1" castleHealth={socketPlayers[0].gameData.castleHealth} gateHealth={socketPlayers[0].gameData.gateHealth} />
             <Castle player="Player 2" castleHealth={socketPlayers[1]?.gameData.castleHealth || players[1].castleHealth} gateHealth={socketPlayers[1]?.gameData.gateHealth || players[1].gateHealth} />
-          </>
-        )}
-      </BattlefieldTop>
-      <BattlefieldBottom>cards</BattlefieldBottom>
-    </BattlefieldContainer>
+            </>
+          )}
+        </BattlefieldTop>
+        <BattlefieldBottom>
+          {showCards && <Cards cards={players[activePlayer].cards} resources={players[activePlayer].resources} />}
+        </BattlefieldBottom>
+      </BattlefieldContainer>
+    </CardsContext.Provider>
   );
 };
 

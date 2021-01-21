@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, createContext } from 'react';
+import React, { useState, useMemo, useEffect, createContext, useCallback } from 'react';
 import styled from 'styled-components';
 import PlayerResources from '../PlayerResources';
 import Castle from '../Castle';
@@ -6,7 +6,7 @@ import { createHand, getResourcesArray, getOpponent, newCard } from '../../utils
 import Cards from '../Cards';
 
 export const CardsContext = createContext();
-const turnDelay = 1600;
+export const turnDelay = 1600;
 
 const Battlefield = () => {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -18,11 +18,11 @@ const Battlefield = () => {
     {
       resources: {
         builders: 2,
-        bricks: 5,
+        bricks: 3,
         soldiers: 2,
-        weapons: 5,
+        weapons: 3,
         magic: 2,
-        crystals: 5,
+        crystals: 3,
       },
       castleHealth: 30,
       gateHealth: 10,
@@ -31,11 +31,11 @@ const Battlefield = () => {
     {
       resources: {
         builders: 2,
-        bricks: 5,
+        bricks: 3,
         soldiers: 2,
-        weapons: 5,
+        weapons: 3,
         magic: 2,
-        crystals: 5,
+        crystals: 3,
       },
       castleHealth: 30,
       gateHealth: 10,
@@ -44,7 +44,7 @@ const Battlefield = () => {
   ]);
 
   // Returns a mutable copy of the players array
-  const copyPlayersState = () => [...players];
+  const copyPlayersState = useCallback(() => [...players], [players]);
 
   // Methods
   const startGame = () => {
@@ -55,13 +55,14 @@ const Battlefield = () => {
     setActivePlayer(activePlayer === 0 ? 1 : 0);
   };
 
-  const addResources = () => {
+  const addResources = useCallback(() => {
+    console.log('add resources');
     const playersCopy = copyPlayersState();
     playersCopy[activePlayer].resources.bricks += playersCopy[activePlayer].resources.builders;
     playersCopy[activePlayer].resources.weapons += playersCopy[activePlayer].resources.soldiers;
     playersCopy[activePlayer].resources.crystals += playersCopy[activePlayer].resources.magic;
     setPlayers(playersCopy);
-  };
+  }, [activePlayer, copyPlayersState]);
 
   const checkIfGameIsOver = () => {
     // Player 1 wins
@@ -232,6 +233,10 @@ const Battlefield = () => {
     curse,
   };
 
+  useEffect(() => {
+    addResources();
+  }, [activePlayer]);
+
   const onCardClick = (card) => {
     const playersCopy = copyPlayersState();
 
@@ -315,7 +320,6 @@ const Battlefield = () => {
           console.error(`No such type ${card.name} in ${card.type}`);
       }
     } else if (card.type === 'crystals') {
-      console.log('Active player:', activePlayer, 'oppnent:', opponent);
       switch (card.name) {
         case 'conjure crystals':
           conjure('crystals', opponent);
@@ -363,10 +367,11 @@ const Battlefield = () => {
       // Add new card to the array
       playersCopy[activePlayer].cards.push(newCard());
 
+      setPlayers(playersCopy);
+
       // Switch players
       switchPlayer();
 
-      setPlayers(playersCopy);
       setTurnIsInProgress(false);
     }, turnDelay);
   };

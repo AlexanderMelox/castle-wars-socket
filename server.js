@@ -25,6 +25,8 @@ io.on('connection', (socket) => {
   console.log('New client connected');
 
   socket.on('newUser', ({ roomId, name }) => {
+    console.log('New user entered', name);
+
     // Create room if it does not exists
     let room = rooms[roomId];
 
@@ -40,7 +42,7 @@ io.on('connection', (socket) => {
     // Add user to the room
     room.users.push({ name, roomId, resources: [], id });
 
-    socket.emit('update', room);
+    io.emit('update', room);
   });
 
   socket.on('disconnect', () => {

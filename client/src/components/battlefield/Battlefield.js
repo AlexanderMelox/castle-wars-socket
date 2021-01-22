@@ -3,12 +3,14 @@ import styled, { css } from 'styled-components';
 import socketIOClient from 'socket.io-client';
 import PlayerResources from '../PlayerResources';
 import Castle from '../Castle';
-import { createHand, getResourcesArray, getOpponent } from '../../utils';
+import { initResources, getResourcesArray, getOpponent } from '../../utils';
 import Cards from '../Cards';
 
 export const CardsContext = createContext();
 const turnDelay = 1600;
-const ENDPOINT = 'http://127.0.0.1:3001';
+const ENDPOINT = 'http://localhost:3001';
+
+const socket = socketIOClient(ENDPOINT);
 
 const Battlefield = () => {
   const [socketPlayers, setSocketPlayers] = useState([]);
@@ -17,60 +19,24 @@ const Battlefield = () => {
   const [turnIsInProgress] = useState(false);
   const [activePlayer, setActivePlayer] = useState(0);
   const opponent = useMemo(() => getOpponent(activePlayer), [activePlayer]);
-  const [players, setPlayers] = useState([
-    {
-      resources: {
-        builders: 2,
-        bricks: 5,
-        soldiers: 2,
-        weapons: 5,
-        magic: 2,
-        crystals: 5,
-      },
-      castleHealth: 30,
-      gateHealth: 10,
-      cards: createHand(),
-    },
-    {
-      resources: {
-        builders: 2,
-        bricks: 5,
-        soldiers: 2,
-        weapons: 5,
-        magic: 2,
-        crystals: 5,
-      },
-      castleHealth: 30,
-      gateHealth: 10,
-      cards: createHand(),
-    },
-  ]);
 
   const [roomname, setRoomname] = useState('');
   const [username, setUsername] = useState('');
 
-  const [message, setMessage] = useState(null);
-
   useEffect(() => {
-    const socket = socketIOClient(ENDPOINT);
-    socket.on('update', (message) => setMessage(message));
-
-    return () => socket.disconnect();
+    socket.on('update', (room) => {
+      console.log(room);
+      // setSocketPlayers(room.users);
+    });
   }, []);
 
-  useEffect(() => {
-    console.log(message);
-  }, [message]);
-
   // Returns a mutable copy of the players array
-  const copyPlayersState = () => [...players];
+  const copyPlayersState = () => [...socketPlayers];
 
   // Methods
   const startGame = () => {
-    const socket = socketIOClient(ENDPOINT);
-
     setIsPlaying(true);
-    socket.emit('newUser', { name: username, roomId: roomname });
+    socket.emit('newUser', { name: username, roomId: roomname, resources: initResources() });
   };
 
   // useEffect(() => {

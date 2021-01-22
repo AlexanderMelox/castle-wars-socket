@@ -16,7 +16,9 @@ const Card = ({ card, resources }) => {
       <Body>
         <Name>{card.name}</Name>
         <Icon src={icons[card.name]} $isCrushType={isCrushType} />
-        <Description>{card.description}</Description>
+        <Description
+          dangerouslySetInnerHTML={{__html: card.description}}
+        />
       </Body>
     </StyledCard>
   );

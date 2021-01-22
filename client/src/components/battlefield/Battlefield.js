@@ -452,7 +452,7 @@ const Battlefield = () => {
         </BattlefieldTop>
         <BattlefieldBottom>
           {/* TODO: only show the cards for the current player */}
-          {showCards && players && players.length && <Cards cards={players[activePlayer]?.cards} resources={players[activePlayer]?.resources} />}
+          {showCards && players && players.length && <Cards cards={players[activePlayer]?.cards} resources={players[activePlayer]?.resources} isCurrentUser={userId === activePlayer} userId={userId} />}
         </BattlefieldBottom>
       </BattlefieldContainer>
     </CardsContext.Provider>

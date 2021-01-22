@@ -24,26 +24,7 @@ app.get('/', (req, res) => {
 io.on('connection', (socket) => {
   console.log('New client connected');
 
-  socket.on('newUser', ({ roomId, name }) => {
-    console.log('New user entered', name);
-
-    // Create room if it does not exists
-    let room = rooms[roomId];
-
-    // check if room exists
-    if (!room) {
-      rooms[roomId] = {};
-      room = rooms[roomId];
-      room.users = [];
-    }
-
-    const id = room.users.length === 0 ? 0 : 1;
-
-    // Add user to the room
-    room.users.push({ name, roomId, resources: [], id });
-
-    io.emit('update', room);
-  });
+  addUserToRoom(socket);
 
   socket.on('disconnect', () => {
     console.log('Client disconnected');
@@ -67,7 +48,7 @@ const addUserToRoom = (socket) => {
     // Add user to the room
     room.users.push({ name, roomId, resources: [], id });
 
-    socket.emit('update', room);
+    io.emit('update', room);
   });
 };
 

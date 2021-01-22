@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, createContext, useRef } from 'react';
+import React, { useState, useMemo, useEffect, createContext, useCallback } from 'react';
 import styled, { css } from 'styled-components';
 import socketIOClient from 'socket.io-client';
 import PlayerResources from '../PlayerResources';
 import Castle from '../Castle';
-import { initResources, getResourcesArray, getOpponent } from '../../utils';
+import { createHand, getResourcesArray, getOpponent, newCard } from '../../utils';
 import Cards from '../Cards';
 
 export const CardsContext = createContext();
@@ -13,7 +13,34 @@ const ENDPOINT = 'http://localhost:3001';
 const socket = socketIOClient(ENDPOINT);
 
 const Battlefield = () => {
-  const [socketPlayers, setSocketPlayers] = useState([]);
+  const [players, setPlayers] = useState([
+    {
+      resources: {
+        builders: 2,
+        bricks: 5,
+        soldiers: 2,
+        weapons: 5,
+        magic: 2,
+        crystals: 5,
+      },
+      castleHealth: 30,
+      gateHealth: 10,
+      cards: createHand(),
+    },
+    {
+      resources: {
+        builders: 2,
+        bricks: 5,
+        soldiers: 2,
+        weapons: 5,
+        magic: 2,
+        crystals: 5,
+      },
+      castleHealth: 30,
+      gateHealth: 10,
+      cards: createHand(),
+    },
+  ]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
   const [turnIsInProgress, setTurnIsInProgress] = useState(false);
@@ -26,17 +53,17 @@ const Battlefield = () => {
   useEffect(() => {
     socket.on('update', (room) => {
       console.log(room);
-      // setSocketPlayers(room.users);
+      setPlayers(room.users);
     });
   }, []);
 
   // Returns a mutable copy of the players array
-  const copyPlayersState = () => [...socketPlayers];
-  
+  const copyPlayersState = useCallback(() => [...players], [players]);
+
   // Methods
   const startGame = () => {
     setIsPlaying(true);
-    socket.emit('newUser', { name: username, roomId: roomname, resources: initResources() });
+    socket.emit('newUser', { name: username, roomId: roomname });
   };
 
   // useEffect(() => {
@@ -94,7 +121,6 @@ const Battlefield = () => {
   };
 
   const addResources = useCallback(() => {
-    console.log('add resources');
     const playersCopy = copyPlayersState();
     playersCopy[activePlayer].resources.bricks += playersCopy[activePlayer].resources.builders;
     playersCopy[activePlayer].resources.weapons += playersCopy[activePlayer].resources.soldiers;
@@ -271,9 +297,9 @@ const Battlefield = () => {
     curse,
   };
 
-  useEffect(() => {
-    addResources();
-  }, [activePlayer]);
+  // useEffect(() => {
+  //   addResources();
+  // }, [activePlayer]);
 
   const onCardClick = (card) => {
     const playersCopy = copyPlayersState();
@@ -438,36 +464,36 @@ const Battlefield = () => {
           </BattlefieldMenu>
         )}
         <BattlefieldTop>
-          {isPlaying && socketPlayers && socketPlayers.length && (
+          {isPlaying && players && players.length && (
             <>
-              {socketPlayers && socketPlayers.length && <RoomLabel>Room: {socketPlayers[0].roomId}</RoomLabel>}
-              <SkipButton>Skip turn</SkipButton>
+              {players && players.length && <RoomLabel>Room: {players[0].roomId}</RoomLabel>}
+              <SkipButton onClick={skipTurn}>Skip turn</SkipButton>
 
               <PlayerResources
-                player={socketPlayers[0].name || 'Player 1'}
+                player={players[0]?.name || 'Player 1'}
                 isActivePlayer={activePlayer === 0}
-                resources={socketPlayers[0].gameData.resources}
-                castleHealth={socketPlayers[0].gameData.castleHealth}
-                gateHealth={socketPlayers[0].gameData.gateHealth}
-                id={socketPlayers[0].id}
+                resources={players[0]?.gameData.resources}
+                castleHealth={players[0]?.gameData.castleHealth}
+                gateHealth={players[0]?.gameData.gateHealth}
+                id={players[0]?.id}
               />
               <PlayerResources
-                player={socketPlayers[1]?.name || 'Waiting for player 2 to join'}
+                player={players[1]?.name || 'Waiting for player 2 to join'}
                 isActivePlayer={activePlayer === 1}
-                resources={socketPlayers[1]?.gameData.resources || players[1].resources}
-                castleHealth={socketPlayers[1]?.gameData.castleHealth || players[1].castleHealth}
-                gateHealth={socketPlayers[1]?.gameData.gateHealth || players[1].gateHealth}
-                id={socketPlayers[1]?.id || 1}
+                resources={players[1]?.gameData.resources || players[1].resources}
+                castleHealth={players[1]?.gameData.castleHealth || players[1].castleHealth}
+                gateHealth={players[1]?.gameData.gateHealth || players[1].gateHealth}
+                id={players[1]?.id || 1}
               />
               <Castle
                 player="Player 1"
-                castleHealth={socketPlayers[0].gameData.castleHealth}
-                gateHealth={socketPlayers[0].gameData.gateHealth}
+                castleHealth={players[0].gameData.castleHealth}
+                gateHealth={players[0].gameData.gateHealth}
               />
               <Castle
                 player="Player 2"
-                castleHealth={socketPlayers[1]?.gameData.castleHealth || players[1].castleHealth}
-                gateHealth={socketPlayers[1]?.gameData.gateHealth || players[1].gateHealth}
+                castleHealth={players[1]?.gameData.castleHealth || players[1].castleHealth}
+                gateHealth={players[1]?.gameData.gateHealth || players[1].gateHealth}
               />
             </>
           )}

@@ -21,22 +21,6 @@ export const getOpponent = (activePlayer) => {
   return opponent;
 };
 
-export const initResources = () => {
-  return {
-    resources: {
-      builders: 2,
-      bricks: 5,
-      soldiers: 2,
-      weapons: 5,
-      magic: 2,
-      crystals: 5,
-    },
-    castleHealth: 30,
-    gateHealth: 10,
-    cards: createHand(),
-  };
-};
-
 export const resourceColorMap = {
   bricks: `var(--color-building)`,
   weapons: `var(--color-weapons)`,

@@ -1,14 +1,14 @@
 import React, { useState, useMemo, useEffect, createContext, useRef } from 'react';
 import styled, { css } from 'styled-components';
+import socketIOClient from 'socket.io-client';
 import PlayerResources from '../PlayerResources';
 import Castle from '../Castle';
 import { createHand, getResourcesArray, getOpponent } from '../../utils';
 import Cards from '../Cards';
 
-import buildSocketUrl from '../../utils/buildSocketUrl';
-
 export const CardsContext = createContext();
 const turnDelay = 1600;
+const ENDPOINT = 'http://127.0.0.1:3001';
 
 const Battlefield = () => {
   const [socketPlayers, setSocketPlayers] = useState([]);
@@ -48,66 +48,81 @@ const Battlefield = () => {
 
   const [roomname, setRoomname] = useState('');
   const [username, setUsername] = useState('');
-  const socket = useRef(null);
+
+  const [message, setMessage] = useState(null);
+
+  useEffect(() => {
+    const socket = socketIOClient(ENDPOINT);
+    socket.on('update', (message) => setMessage(message));
+
+    return () => socket.disconnect();
+  }, []);
+
+  useEffect(() => {
+    console.log(message);
+  }, [message]);
 
   // Returns a mutable copy of the players array
   const copyPlayersState = () => [...players];
 
   // Methods
   const startGame = () => {
+    const socket = socketIOClient(ENDPOINT);
+
     setIsPlaying(true);
+    socket.emit('newUser', { name: username, roomId: roomname });
   };
 
-  useEffect(() => {
-    if (isPlaying && socket) {
-      try {
-        let socket = buildSocketUrl();
-        socket.addEventListener('open', () => {
-          console.log("SOCKET CONNECTION SUCCESSFUL");
-          console.log(socketPlayers && socketPlayers.length ? 1 : 0);
-          socket.send(JSON.stringify({
-            name: username,
-            roomId: roomname,
-            gameData: socketPlayers && socketPlayers.length === 2 ? players[1] : players[0],
-            id: socketPlayers && socketPlayers.length === 2 ? 1 : 0
-          }));
-        });
-        socket.onmessage = message => {
-          console.log(message);
-          console.log(message.data);
-          console.log(JSON.parse(message.data));
-          const socketUsers = JSON.parse(message.data).users ? JSON.parse(message.data).users : [JSON.parse(message.data)];
-          console.log('new players: ', socketUsers.length);
-          console.log('existing players: ', socketPlayers.length);
-          // if users.length is 1 replace the first
-          // item in `players` and leave the second object
+  // useEffect(() => {
+  //   if (isPlaying && socket) {
+  //     try {
+  //       let socket = buildSocketUrl();
+  //       socket.addEventListener('open', () => {
+  //         console.log('SOCKET CONNECTION SUCCESSFUL');
+  //         console.log(socketPlayers && socketPlayers.length ? 1 : 0);
+  //         socket.send(
+  //           JSON.stringify({
+  //             name: username,
+  //             roomId: roomname,
+  //             gameData: socketPlayers && socketPlayers.length === 2 ? players[1] : players[0],
+  //             id: socketPlayers && socketPlayers.length === 2 ? 1 : 0,
+  //           })
+  //         );
+  //       });
+  //       socket.onmessage = (message) => {
+  //         console.log(message);
+  //         console.log(message.data);
+  //         console.log(JSON.parse(message.data));
+  //         const socketUsers = JSON.parse(message.data).users
+  //           ? JSON.parse(message.data).users
+  //           : [JSON.parse(message.data)];
+  //         console.log('new players: ', socketUsers.length);
+  //         console.log('existing players: ', socketPlayers.length);
+  //         // if users.length is 1 replace the first
+  //         // item in `players` and leave the second object
 
-          // if users.length is 2 replace the entire `players`
-          // array that is returned
-          if (socketUsers && socketUsers.length) {
-            const clone = [...socketPlayers];
-            console.log([clone.flat(), socketUsers].flat());
-            setSocketPlayers(socketUsers);
-          }
+  //         // if users.length is 2 replace the entire `players`
+  //         // array that is returned
+  //         if (socketUsers && socketUsers.length) {
+  //           const clone = [...socketPlayers];
+  //           console.log([clone.flat(), socketUsers].flat());
+  //           setSocketPlayers(socketUsers);
+  //         }
 
-          // then this is the end of setting up the game
-          // there should be a new useEffect to update each players
-          // game data after each turn
-        }
-        socket.addEventListener('close', () => {
-          console.log('DISCONNECTED');
-          // remove the user that disconnected
-        });
-      } catch (error) {
-        console.log(error);
-      }
-    }
-  }, [socket, username, roomname, isPlaying, players]);
+  //         // then this is the end of setting up the game
+  //         // there should be a new useEffect to update each players
+  //         // game data after each turn
+  //       };
+  //       socket.addEventListener('close', () => {
+  //         console.log('DISCONNECTED');
+  //         // remove the user that disconnected
+  //       });
+  //     } catch (error) {
+  //       console.log(error);
+  //     }
+  //   }
+  // }, [socket, username, roomname, isPlaying, players]);
 
-  console.log({players});
-  console.log({socketPlayers});
-
-          
   const switchPlayer = () => {
     setActivePlayer(activePlayer === 0 ? 1 : 0);
   };
@@ -276,43 +291,51 @@ const Battlefield = () => {
               placeholder="Enter username"
               type="text"
               value={username}
-              onChange={event => setUsername(event.target.value)}
+              onChange={(event) => setUsername(event.target.value)}
             />
             <RoomNameInput
               placeholder="Enter room name"
               type="text"
               value={roomname}
-              onChange={event => setRoomname(event.target.value)}
+              onChange={(event) => setRoomname(event.target.value)}
             />
-            <BattlefieldButtons disabled={!username.length || !roomname.length} onClick={startGame}>Play</BattlefieldButtons>
+            <BattlefieldButtons disabled={!username.length || !roomname.length} onClick={startGame}>
+              Play
+            </BattlefieldButtons>
             <BattlefieldButtons>How to Play</BattlefieldButtons>
           </BattlefieldMenu>
         )}
         <BattlefieldTop>
-          {isPlaying && (socketPlayers && socketPlayers.length) && (
+          {isPlaying && socketPlayers && socketPlayers.length && (
             <>
-              {socketPlayers && socketPlayers.length && (
-              <RoomLabel>Room: {socketPlayers[0].roomId}</RoomLabel>
-            )}
-            <SkipButton>Skip turn</SkipButton>
-            <PlayerResources
-              player={socketPlayers[0].name || 'Player 1'}
-              isActivePlayer={activePlayer === 0}
-              resources={socketPlayers[0].gameData.resources}
-              castleHealth={socketPlayers[0].gameData.castleHealth}
-              gateHealth={socketPlayers[0].gameData.gateHealth}
-              id={socketPlayers[0].id}
-            />
-            <PlayerResources
-              player={socketPlayers[1]?.name || 'Waiting for player 2 to join'}
-              isActivePlayer={activePlayer === 1}
-              resources={socketPlayers[1]?.gameData.resources || players[1].resources}
-              castleHealth={socketPlayers[1]?.gameData.castleHealth || players[1].castleHealth}
-              gateHealth={socketPlayers[1]?.gameData.gateHealth || players[1].gateHealth}
-              id={socketPlayers[1]?.id || 1}
-            />
-            <Castle player="Player 1" castleHealth={socketPlayers[0].gameData.castleHealth} gateHealth={socketPlayers[0].gameData.gateHealth} />
-            <Castle player="Player 2" castleHealth={socketPlayers[1]?.gameData.castleHealth || players[1].castleHealth} gateHealth={socketPlayers[1]?.gameData.gateHealth || players[1].gateHealth} />
+              {socketPlayers && socketPlayers.length && <RoomLabel>Room: {socketPlayers[0].roomId}</RoomLabel>}
+              <SkipButton>Skip turn</SkipButton>
+              <PlayerResources
+                player={socketPlayers[0].name || 'Player 1'}
+                isActivePlayer={activePlayer === 0}
+                resources={socketPlayers[0].gameData.resources}
+                castleHealth={socketPlayers[0].gameData.castleHealth}
+                gateHealth={socketPlayers[0].gameData.gateHealth}
+                id={socketPlayers[0].id}
+              />
+              <PlayerResources
+                player={socketPlayers[1]?.name || 'Waiting for player 2 to join'}
+                isActivePlayer={activePlayer === 1}
+                resources={socketPlayers[1]?.gameData.resources || players[1].resources}
+                castleHealth={socketPlayers[1]?.gameData.castleHealth || players[1].castleHealth}
+                gateHealth={socketPlayers[1]?.gameData.gateHealth || players[1].gateHealth}
+                id={socketPlayers[1]?.id || 1}
+              />
+              <Castle
+                player="Player 1"
+                castleHealth={socketPlayers[0].gameData.castleHealth}
+                gateHealth={socketPlayers[0].gameData.gateHealth}
+              />
+              <Castle
+                player="Player 2"
+                castleHealth={socketPlayers[1]?.gameData.castleHealth || players[1].castleHealth}
+                gateHealth={socketPlayers[1]?.gameData.gateHealth || players[1].gateHealth}
+              />
             </>
           )}
         </BattlefieldTop>
@@ -366,20 +389,19 @@ export const BattlefieldButtons = styled.button`
   margin: 1rem;
   cursor: pointer;
   transition: all 0.2s;
-  ${({ disabled }) => disabled
-    ? css`
-      background-color: var(--color-hp);
-      cursor: not-allowed;
-    `
-    : css`
-      background-color: var(--castle-red);
-    `
-  }
+  ${({ disabled }) =>
+    disabled
+      ? css`
+          background-color: var(--color-hp);
+          cursor: not-allowed;
+        `
+      : css`
+          background-color: var(--castle-red);
+        `}
 
   :hover {
     transform: translateY(-3px) scale(1.1);
   }
-  
 `;
 
 export const RoomNameInput = styled.input`

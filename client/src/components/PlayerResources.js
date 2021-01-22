@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import styled from 'styled-components/macro';
+import { turnDelay } from './battlefield';
 import { resourceColorMap } from '../utils';
 import usePreviousState from '../hooks/usePreviousState';
 
@@ -18,6 +19,8 @@ const startingUpdated = {
 
 const PlayerResources = ({ player, isActivePlayer, resources, castleHealth, gateHealth, id }) => {
   const [updated, setUpdated] = useState(startingUpdated);
+  // stores the previous resources to know which one changed to show in the ui
+  const prevResources = usePreviousState(resources);
 
   const resetUpdates = () => setUpdated(startingUpdated);
 

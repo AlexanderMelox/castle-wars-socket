@@ -16,7 +16,7 @@ const Battlefield = () => {
   const [socketPlayers, setSocketPlayers] = useState([]);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isGameOver, setIsGameOver] = useState(false);
-  const [turnIsInProgress] = useState(false);
+  const [turnIsInProgress, setTurnIsInProgress] = useState(false);
   const [activePlayer, setActivePlayer] = useState(0);
   const opponent = useMemo(() => getOpponent(activePlayer), [activePlayer]);
 
@@ -32,7 +32,7 @@ const Battlefield = () => {
 
   // Returns a mutable copy of the players array
   const copyPlayersState = () => [...socketPlayers];
-
+  
   // Methods
   const startGame = () => {
     setIsPlaying(true);
@@ -93,30 +93,49 @@ const Battlefield = () => {
     setActivePlayer(activePlayer === 0 ? 1 : 0);
   };
 
-  const addResources = () => {
+  const addResources = useCallback(() => {
+    console.log('add resources');
     const playersCopy = copyPlayersState();
     playersCopy[activePlayer].resources.bricks += playersCopy[activePlayer].resources.builders;
     playersCopy[activePlayer].resources.weapons += playersCopy[activePlayer].resources.soldiers;
     playersCopy[activePlayer].resources.crystals += playersCopy[activePlayer].resources.magic;
     setPlayers(playersCopy);
-  };
+  }, [activePlayer, copyPlayersState]);
 
   const checkIfGameIsOver = () => {
+    // Player 1 wins
     if (players[1].castleHealth <= 0 || players[0].castleHealth >= 100) {
       setIsGameOver(true);
+      // TODO: Create an end game state
       alert('Congratulations Player 1 Won!');
     } else if (players[0].castleHealth <= 0 || players[1].castleHealth >= 100) {
+      // Player 2 wins
       setIsGameOver(true);
+      // TODO: Create an end game state
       alert('Congratulations Player 2 Won!');
     }
   };
 
   const skipTurn = () => {
+    if (turnIsInProgress) return;
+
+    setTurnIsInProgress(true);
     addResources();
-    switchPlayer();
+    setTimeout(() => {
+      switchPlayer();
+      setTurnIsInProgress(false);
+    }, turnDelay);
   };
 
-  const showCards = useMemo(() => isPlaying, [isPlaying]);
+  const showCards = useMemo(() => {
+    if (isPlaying) {
+      if (turnIsInProgress) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+  }, [isPlaying, turnIsInProgress]);
 
   // card actions
   const thief = () => {
@@ -215,6 +234,14 @@ const Battlefield = () => {
     setPlayers(playersCopy);
   };
 
+  const crush = (type) => {
+    const playersCopy = copyPlayersState();
+    playersCopy[opponent].resources[type] < 8
+      ? (playersCopy[opponent].resources[type] = 0)
+      : (playersCopy[opponent].resources[type] -= 8);
+    setPlayers(playersCopy);
+  };
+
   const curse = () => {
     const playersCopy = copyPlayersState();
     const resourcesArray = Object.keys(playersCopy[activePlayer].resources);
@@ -244,8 +271,147 @@ const Battlefield = () => {
     curse,
   };
 
+  useEffect(() => {
+    addResources();
+  }, [activePlayer]);
+
   const onCardClick = (card) => {
-    console.log(card);
+    const playersCopy = copyPlayersState();
+
+    // disable card if the game is over or a player has clicked a card already
+    if (isGameOver || turnIsInProgress) return;
+
+    setTurnIsInProgress(true);
+
+    // Deduct the resource from the active player
+    playersCopy[activePlayer].resources[card.type] -= card.cost;
+
+    // filter which action the card is
+    if (card.type === 'weapons') {
+      switch (card.name) {
+        case 'swat':
+          swat(opponent);
+          break;
+        case 'thief':
+          thief(opponent, activePlayer);
+          break;
+        case 'saboteur':
+          saboteur(opponent);
+          break;
+        case 'platoon':
+          attack(opponent, 6);
+          break;
+        case 'archer':
+          attack(opponent, 2);
+          break;
+        case 'banshee':
+          attack(opponent, 32);
+          break;
+        case 'attack':
+          attack(opponent, 12);
+          break;
+        case 'rider':
+          attack(opponent, 4);
+          break;
+        case 'knight':
+          attack(opponent, 3);
+          break;
+        case 'recruit':
+          hire('soldiers');
+          break;
+        default:
+          console.error(`No such type ${card.name} in ${card.type}`);
+      }
+    } else if (card.type === 'bricks') {
+      switch (card.name) {
+        case 'fence':
+          addToFence(22);
+          break;
+        case 'base':
+          addToCastle(2);
+          break;
+        case 'school':
+          hire('builders');
+          break;
+        case 'tower':
+          addToCastle(5);
+          break;
+        case 'defense':
+          addToFence(6);
+          break;
+        case 'reserve':
+          reserve();
+          break;
+        case 'babylon':
+          addToCastle(32);
+          break;
+        case 'fort':
+          addToCastle(20);
+          break;
+        case 'wain':
+          wain(opponent);
+          break;
+        case 'wall':
+          addToFence(3);
+          break;
+        default:
+          console.error(`No such type ${card.name} in ${card.type}`);
+      }
+    } else if (card.type === 'crystals') {
+      switch (card.name) {
+        case 'conjure crystals':
+          conjure('crystals', opponent);
+          break;
+        case 'conjure weapons':
+          conjure('weapons');
+          break;
+        case 'conjure bricks':
+          conjure('bricks');
+          break;
+        case 'crush bricks':
+          crush('bricks', opponent);
+          break;
+        case 'crush weapons':
+          crush('weapons', opponent);
+          break;
+        case 'crush crystals':
+          crush('crystals', opponent);
+          break;
+        case 'sorcerer':
+          hire('magic');
+          break;
+        case 'dragon':
+          attack(opponent, 25);
+          break;
+        case 'pixies':
+          addToCastle(22);
+          break;
+        case 'curse':
+          curse(opponent);
+          break;
+        default:
+          console.error(`No such type ${card.name} in ${card.type}`);
+      }
+    }
+
+    setTimeout(() => {
+      // Check if anyone won the game
+      checkIfGameIsOver();
+
+      // Remove old card from array
+      const cardIndex = playersCopy[activePlayer].cards.findIndex((c) => c.name === card.name);
+      playersCopy[activePlayer].cards.splice(cardIndex, 1);
+
+      // Add new card to the array
+      playersCopy[activePlayer].cards.push(newCard());
+
+      setPlayers(playersCopy);
+
+      // Switch players
+      switchPlayer();
+
+      setTurnIsInProgress(false);
+    }, turnDelay);
   };
 
   return (
@@ -276,6 +442,7 @@ const Battlefield = () => {
             <>
               {socketPlayers && socketPlayers.length && <RoomLabel>Room: {socketPlayers[0].roomId}</RoomLabel>}
               <SkipButton>Skip turn</SkipButton>
+
               <PlayerResources
                 player={socketPlayers[0].name || 'Player 1'}
                 isActivePlayer={activePlayer === 0}
@@ -306,6 +473,7 @@ const Battlefield = () => {
           )}
         </BattlefieldTop>
         <BattlefieldBottom>
+          {/* TODO: only show the cards for the current player */}
           {showCards && <Cards cards={players[activePlayer].cards} resources={players[activePlayer].resources} />}
         </BattlefieldBottom>
       </BattlefieldContainer>
@@ -316,7 +484,7 @@ const Battlefield = () => {
 const BattlefieldContainer = styled.div`
   grid-area: battlefield;
   display: grid;
-  grid-template-rows: 3fr 1fr;
+  grid-template-rows: 1fr 200px;
   position: relative;
 `;
 

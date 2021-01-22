@@ -1,11 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 
 import GlobalStyle from './components/GlobalStyle';
 import Header from './components/header';
 import Battlefield from './components/battlefield';
 
-function App() {
+const App = () => {
   return (
     <>
       <GlobalStyle />
@@ -15,7 +15,7 @@ function App() {
       </AppContainer>
     </>
   );
-}
+};
 
 const AppContainer = styled.div`
   display: grid;

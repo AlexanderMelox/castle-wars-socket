@@ -6,8 +6,8 @@ import Card from './Card';
 const Cards = ({ cards, resources }) => {
   return (
     <CardsContainer>
-      {cards.map((card) => (
-        <Card card={card} resources={resources[card.type]} />
+      {cards.map((card, i) => (
+        <Card key={card + i} card={card} resources={resources[card.type]} />
       ))}
     </CardsContainer>
   );

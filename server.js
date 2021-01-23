@@ -32,15 +32,16 @@ io.on('connection', (socket) => {
   });
 });
 
-const onUpdate = socket => {
-  // get the room id
-
+const onUpdate = (socket) => {
   socket.on('update', (update) => {
-    console.log(update);
-    let room = rooms[update.roomID];
-    room = update.players;
+    let room = rooms[update.roomId];
+    // console.log('update', update);
+
+    room = update;
+
+    io.emit('remote-update', room);
   });
-}
+};
 
 const addUserToRoom = (socket) => {
   socket.on('newUser', ({ roomId, name, resources, userId }) => {
@@ -54,16 +55,18 @@ const addUserToRoom = (socket) => {
       room.users = [];
     }
 
-    console.log({userId});
+    // console.log({userId});
 
     // Add user to the room
     room.users.push({ name, roomId, userId, ...resources });
 
-    io.emit('update', room);
+    room.roomId = roomId;
+
+    io.emit('remote-update', room);
   });
 
   socket.on('setActivePlayer', ({ activePlayerId }) => {
-    console.log({activePlayerId});
+    // console.log({activePlayerId});
     io.emit('activePlayer', activePlayerId);
   });
 };

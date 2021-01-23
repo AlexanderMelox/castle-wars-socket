@@ -24,7 +24,7 @@ const defaultResources = {
   castleHealth: 30,
   gateHealth: 10,
   cards: createHand(),
-}
+};
 
 const Battlefield = () => {
   const [players, setPlayers] = useState([]);
@@ -38,18 +38,14 @@ const Battlefield = () => {
   const [username, setUsername] = useState('');
   const [userId, setUserId] = useState(null);
 
-
   useEffect(() => {
-    socket.on('update', (room) => {
-      console.log(room);
-      console.log(typeof room.users);
-      setPlayers(room.users);
-
+    socket.on('remote-update', (data) => {
+      setPlayers(data.users);
     });
     socket.on('activePlayer', (newActivePlayerId) => {
-      console.log({newActivePlayerId});
       setActivePlayer(newActivePlayerId);
     });
+    return () => socket.disconnect();
   }, []);
 
   // Returns a mutable copy of the players array
@@ -58,14 +54,13 @@ const Battlefield = () => {
   // Methods
   const startGame = () => {
     setIsPlaying(true);
-    console.log({players});
     const id = players.length === 0 ? 0 : 1;
     socket.emit('newUser', { name: username, roomId: roomname, resources: defaultResources, userId: id });
     setUserId(id);
   };
 
   const switchPlayer = () => {
-    socket.emit('setActivePlayer', { activePlayerId: activePlayer === 0 ? 1 : 0});
+    socket.emit('setActivePlayer', { activePlayerId: activePlayer === 0 ? 1 : 0 });
   };
 
   const addResources = useCallback(() => {
@@ -245,11 +240,6 @@ const Battlefield = () => {
     curse,
   };
 
-  useEffect(() => {
-    console.log('socket changed');
-    if (isPlaying && players && players.length) socket.emit('update', { users: players, roomId: roomname});
-  }, [players, roomname, isPlaying]);
-
   const onCardClick = (card) => {
     const playersCopy = copyPlayersState();
 
@@ -369,6 +359,8 @@ const Battlefield = () => {
       }
     }
 
+    socket.emit('update', { users: players, roomId: roomname });
+
     setTimeout(() => {
       // Check if anyone won the game
       checkIfGameIsOver();
@@ -379,9 +371,6 @@ const Battlefield = () => {
 
       // Add new card to the array
       playersCopy[activePlayer].cards.push(newCard());
-
-      // setPlayers(playersCopy);
-      socket.emit('update', playersCopy);
 
       // Switch players
       switchPlayer();
@@ -417,42 +406,51 @@ const Battlefield = () => {
           {isPlaying && players && players.length && (
             <>
               {players && players.length && <RoomLabel>Room: {players[0].roomId}</RoomLabel>}
-              <SkipButton onClick={skipTurn}>Skip turn</SkipButton>
-
-              <PlayerResources
-                player={players[0]?.name || 'Player 1'}
-                isActivePlayer={activePlayer === 0}
-                resources={players[0]?.resources || defaultResources.resources}
-                castleHealth={players[0]?.castleHealth  || defaultResources.castleHealth}
-                gateHealth={players[0]?.gateHealth || defaultResources.gateHealth}
-                id={players[0]?.userId}
-              />
-              {players && players.length === 2 && (
-                <PlayerResources
-                  player={players[1]?.name || 'Waiting for player 2 to join'}
-                  isActivePlayer={activePlayer === 1}
-                  resources={players[1]?.resources || defaultResources.resources}
-                  castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
-                  gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
-                  id={players[1]?.userId}
-                />
+              {userId === activePlayer && <SkipButton onClick={skipTurn}>Skip turn</SkipButton>}
+              {players.length === 1 && <p>waiting for player to join</p>}
+              {players.length === 2 && (
+                <>
+                  <PlayerResources
+                    player={players[0]?.name || 'Player 1'}
+                    isActivePlayer={activePlayer === 0}
+                    resources={players[0]?.resources || defaultResources.resources}
+                    castleHealth={players[0]?.castleHealth || defaultResources.castleHealth}
+                    gateHealth={players[0]?.gateHealth || defaultResources.gateHealth}
+                    id={players[0]?.userId}
+                  />
+                  <PlayerResources
+                    player={players[1]?.name || 'Waiting for player 2 to join'}
+                    isActivePlayer={activePlayer === 1}
+                    resources={players[1]?.resources || defaultResources.resources}
+                    castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
+                    gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
+                    id={players[1]?.userId}
+                  />
+                  <Castle
+                    player="Player 1"
+                    castleHealth={players[0].castleHealth || defaultResources.castleHealth}
+                    gateHealth={players[0].gateHealth || defaultResources.gateHealth}
+                  />
+                  <Castle
+                    player="Player 2"
+                    castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
+                    gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
+                  />
+                </>
               )}
-              <Castle
-                player="Player 1"
-                castleHealth={players[0].castleHealth || defaultResources.castleHealth}
-                gateHealth={players[0].gateHealth || defaultResources.gateHealth}
-              />
-              <Castle
-                player="Player 2"
-                castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
-                gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
-              />
             </>
           )}
         </BattlefieldTop>
         <BattlefieldBottom>
           {/* TODO: only show the cards for the current player */}
-          {showCards && players && players.length && <Cards cards={players[activePlayer]?.cards} resources={players[activePlayer]?.resources} isCurrentUser={userId === activePlayer} userId={userId} />}
+          {showCards && players && players.length && (
+            <Cards
+              cards={players[activePlayer]?.cards}
+              resources={players[activePlayer]?.resources}
+              isCurrentUser={userId === activePlayer}
+              userId={userId}
+            />
+          )}
         </BattlefieldBottom>
       </BattlefieldContainer>
     </CardsContext.Provider>

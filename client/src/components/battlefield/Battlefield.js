@@ -5,9 +5,10 @@ import PlayerResources from '../PlayerResources';
 import Castle from '../Castle';
 import { createHand, getResourcesArray, getOpponent, newCard } from '../../utils';
 import Cards from '../Cards';
+import HowToPlay from '../HowToPlay';
 
 export const CardsContext = createContext();
-const turnDelay = 1600;
+export const turnDelay = 1600;
 const ENDPOINT = 'http://localhost:3001';
 
 const socket = socketIOClient(ENDPOINT);
@@ -45,7 +46,10 @@ const Battlefield = () => {
     socket.on('activePlayer', (newActivePlayerId) => {
       setActivePlayer(newActivePlayerId);
     });
-    return () => socket.disconnect();
+    return () => {
+      socket.disconnect({ roomname, userId });
+      socket.emit('userLeft', { userId, roomname });
+    };
   }, []);
 
   // Returns a mutable copy of the players array
@@ -61,6 +65,7 @@ const Battlefield = () => {
 
   const switchPlayer = () => {
     socket.emit('setActivePlayer', { activePlayerId: activePlayer === 0 ? 1 : 0 });
+    addResources();
   };
 
   const addResources = useCallback(() => {
@@ -69,6 +74,7 @@ const Battlefield = () => {
     playersCopy[activePlayer].resources.weapons += playersCopy[activePlayer].resources.soldiers;
     playersCopy[activePlayer].resources.crystals += playersCopy[activePlayer].resources.magic;
     setPlayers(playersCopy);
+    socket.emit('update', { users: players, roomId: roomname });
   }, [activePlayer, copyPlayersState]);
 
   const checkIfGameIsOver = () => {
@@ -144,16 +150,16 @@ const Battlefield = () => {
     setPlayers(playersCopy);
   };
 
-  const attack = (player, dmg) => {
+  const damageOpponent = (dmg) => {
     const playersCopy = copyPlayersState();
-    if (playersCopy[player].gateHealth <= 0) {
-      playersCopy[player].castleHealth -= dmg;
-    } else if (playersCopy[player].gateHealth < dmg) {
-      const diff = dmg - playersCopy[player].gateHealth;
-      playersCopy[player].gateHealth = 0;
-      playersCopy[player].castleHealth -= diff;
+    if (playersCopy[opponent].gateHealth <= 0) {
+      playersCopy[opponent].castleHealth -= dmg;
+    } else if (playersCopy[opponent].gateHealth < dmg) {
+      const diff = dmg - playersCopy[opponent].gateHealth;
+      playersCopy[opponent].gateHealth = 0;
+      playersCopy[opponent].castleHealth -= diff;
     } else {
-      playersCopy[player].gateHealth -= dmg;
+      playersCopy[opponent].gateHealth -= dmg;
     }
     setPlayers(playersCopy);
   };
@@ -226,6 +232,31 @@ const Battlefield = () => {
     setPlayers(playersCopy);
   };
 
+  const platoon = () => damageOpponent(6);
+  const archer = () => damageOpponent(2);
+  const banshee = () => damageOpponent(32);
+  const attack = () => damageOpponent(12);
+  const rider = () => damageOpponent(4);
+  const knight = () => damageOpponent(3);
+  const recruit = () => hire('soldiers');
+  const fence = () => addToFence(22);
+  const base = () => addToCastle(2);
+  const school = () => hire('builders');
+  const tower = () => addToCastle(5);
+  const defense = () => addToFence(6);
+  const babylon = () => addToCastle(32);
+  const fort = () => addToCastle(20);
+  const wall = () => addToFence(3);
+  const conjureCrystals = () => conjure('crystals');
+  const conjureWeapons = () => conjure('weapons');
+  const conjureBricks = () => conjure('bricks');
+  const crushBricks = () => crush('bricks');
+  const crushWeapons = () => crush('weapons');
+  const crushCrystals = () => crush('crystals');
+  const sorcerer = () => hire('magic');
+  const dragon = () => attack(25);
+  const pixies = () => addToCastle(22);
+
   const cardActions = {
     thief,
     swat,
@@ -238,6 +269,29 @@ const Battlefield = () => {
     wain,
     conjure,
     curse,
+    platoon,
+    archer,
+    banshee,
+    rider,
+    knight,
+    recruit,
+    fence,
+    base,
+    school,
+    tower,
+    defense,
+    babylon,
+    fort,
+    wall,
+    conjureCrystals,
+    conjureWeapons,
+    conjureBricks,
+    crushBricks,
+    crushWeapons,
+    crushCrystals,
+    sorcerer,
+    dragon,
+    pixies,
   };
 
   const onCardClick = (card) => {
@@ -251,113 +305,8 @@ const Battlefield = () => {
     // Deduct the resource from the active player
     playersCopy[activePlayer].resources[card.type] -= card.cost;
 
-    // filter which action the card is
-    if (card.type === 'weapons') {
-      switch (card.name) {
-        case 'swat':
-          swat(opponent);
-          break;
-        case 'thief':
-          thief(opponent, activePlayer);
-          break;
-        case 'saboteur':
-          saboteur(opponent);
-          break;
-        case 'platoon':
-          attack(opponent, 6);
-          break;
-        case 'archer':
-          attack(opponent, 2);
-          break;
-        case 'banshee':
-          attack(opponent, 32);
-          break;
-        case 'attack':
-          attack(opponent, 12);
-          break;
-        case 'rider':
-          attack(opponent, 4);
-          break;
-        case 'knight':
-          attack(opponent, 3);
-          break;
-        case 'recruit':
-          hire('soldiers');
-          break;
-        default:
-          console.error(`No such type ${card.name} in ${card.type}`);
-      }
-    } else if (card.type === 'bricks') {
-      switch (card.name) {
-        case 'fence':
-          addToFence(22);
-          break;
-        case 'base':
-          addToCastle(2);
-          break;
-        case 'school':
-          hire('builders');
-          break;
-        case 'tower':
-          addToCastle(5);
-          break;
-        case 'defense':
-          addToFence(6);
-          break;
-        case 'reserve':
-          reserve();
-          break;
-        case 'babylon':
-          addToCastle(32);
-          break;
-        case 'fort':
-          addToCastle(20);
-          break;
-        case 'wain':
-          wain(opponent);
-          break;
-        case 'wall':
-          addToFence(3);
-          break;
-        default:
-          console.error(`No such type ${card.name} in ${card.type}`);
-      }
-    } else if (card.type === 'crystals') {
-      switch (card.name) {
-        case 'conjure crystals':
-          conjure('crystals', opponent);
-          break;
-        case 'conjure weapons':
-          conjure('weapons');
-          break;
-        case 'conjure bricks':
-          conjure('bricks');
-          break;
-        case 'crush bricks':
-          crush('bricks', opponent);
-          break;
-        case 'crush weapons':
-          crush('weapons', opponent);
-          break;
-        case 'crush crystals':
-          crush('crystals', opponent);
-          break;
-        case 'sorcerer':
-          hire('magic');
-          break;
-        case 'dragon':
-          attack(opponent, 25);
-          break;
-        case 'pixies':
-          addToCastle(22);
-          break;
-        case 'curse':
-          curse(opponent);
-          break;
-        default:
-          console.error(`No such type ${card.name} in ${card.type}`);
-      }
-    }
+    // run the action
+    cardActions[card.name]();
 
     socket.emit('update', { users: players, roomId: roomname });
 
@@ -376,6 +325,8 @@ const Battlefield = () => {
       switchPlayer();
 
       setTurnIsInProgress(false);
+
+      socket.emit('update', { users: players, roomId: roomname });
     }, turnDelay);
   };
 
@@ -395,55 +346,53 @@ const Battlefield = () => {
               type="text"
               value={roomname}
               onChange={(event) => setRoomname(event.target.value)}
+              $isRoomName
             />
             <BattlefieldButtons disabled={!username.length || !roomname.length} onClick={startGame}>
               Play
             </BattlefieldButtons>
-            <BattlefieldButtons>How to Play</BattlefieldButtons>
+            <HowToPlay />
           </BattlefieldMenu>
         )}
         <BattlefieldTop>
           {isPlaying && players && players.length && (
             <>
               {players && players.length && <RoomLabel>Room: {players[0].roomId}</RoomLabel>}
-              {userId === activePlayer && <SkipButton onClick={skipTurn}>Skip turn</SkipButton>}
-              {players.length === 1 && <p>waiting for player to join</p>}
-              {players.length === 2 && (
-                <>
-                  <PlayerResources
-                    player={players[0]?.name || 'Player 1'}
-                    isActivePlayer={activePlayer === 0}
-                    resources={players[0]?.resources || defaultResources.resources}
-                    castleHealth={players[0]?.castleHealth || defaultResources.castleHealth}
-                    gateHealth={players[0]?.gateHealth || defaultResources.gateHealth}
-                    id={players[0]?.userId}
-                  />
-                  <PlayerResources
-                    player={players[1]?.name || 'Waiting for player 2 to join'}
-                    isActivePlayer={activePlayer === 1}
-                    resources={players[1]?.resources || defaultResources.resources}
-                    castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
-                    gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
-                    id={players[1]?.userId}
-                  />
-                  <Castle
-                    player="Player 1"
-                    castleHealth={players[0].castleHealth || defaultResources.castleHealth}
-                    gateHealth={players[0].gateHealth || defaultResources.gateHealth}
-                  />
-                  <Castle
-                    player="Player 2"
-                    castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
-                    gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
-                  />
-                </>
-              )}
+              {userId === activePlayer && players.length > 1 && <SkipButton onClick={skipTurn}>Skip turn</SkipButton>}
+              <>
+                <PlayerResources
+                  player={players[0]?.name || 'Player 1'}
+                  isActivePlayer={activePlayer === 0}
+                  resources={players[0]?.resources || defaultResources.resources}
+                  castleHealth={players[0]?.castleHealth || defaultResources.castleHealth}
+                  gateHealth={players[0]?.gateHealth || defaultResources.gateHealth}
+                  id={players[0]?.userId}
+                />
+                <PlayerResources
+                  player={players[1]?.name || 'Waiting for player 2 to join'}
+                  isActivePlayer={activePlayer === 1}
+                  resources={players[1]?.resources || defaultResources.resources}
+                  castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
+                  gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
+                  id={players[1]?.userId}
+                />
+                <Castle
+                  player="Player 1"
+                  castleHealth={players[0].castleHealth || defaultResources.castleHealth}
+                  gateHealth={players[0].gateHealth || defaultResources.gateHealth}
+                />
+                <Castle
+                  player="Player 2"
+                  castleHealth={players[1]?.castleHealth || defaultResources.castleHealth}
+                  gateHealth={players[1]?.gateHealth || defaultResources.gateHealth}
+                />
+              </>
             </>
           )}
         </BattlefieldTop>
         <BattlefieldBottom>
           {/* TODO: only show the cards for the current player */}
-          {showCards && players && players.length && (
+          {showCards && players && players.length > 1 && (
             <Cards
               cards={players[activePlayer]?.cards}
               resources={players[activePlayer]?.resources}
@@ -517,25 +466,24 @@ export const BattlefieldButtons = styled.button`
 export const RoomNameInput = styled.input`
   outline: none;
   border: none;
-  color: var(--color-white);
+  color: #222;
   font: inherit;
-  text-shadow: var(--text-shadow);
   box-shadow: var(--text-shadow);
   font-size: 3rem;
   padding: 1.5rem 4rem;
   border-radius: 2rem;
   margin: 1rem;
-  background-color: var(--castle-red);
+  margin-bottom: ${({ $isRoomName }) => ($isRoomName ? '3rem' : 0)};
+  background-color: rgba(255, 255, 255, 0.8);
   cursor: pointer;
   transition: all 0.2s;
-  text-align: center;
 
   :hover {
     transform: translateY(-3px) scale(1.1);
   }
 
   ::placeholder {
-    color: var(--color-white);
+    color: rgba(0, 0, 0, 0.2);
   }
 `;
 

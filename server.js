@@ -26,6 +26,7 @@ io.on('connection', (socket) => {
 
   addUserToRoom(socket);
   onUpdate(socket);
+  userHasLeftTheRoom(socket);
 
   socket.on('disconnect', () => {
     console.log('Client disconnected');
@@ -55,8 +56,6 @@ const addUserToRoom = (socket) => {
       room.users = [];
     }
 
-    // console.log({userId});
-
     // Add user to the room
     room.users.push({ name, roomId, userId, ...resources });
 
@@ -68,6 +67,13 @@ const addUserToRoom = (socket) => {
   socket.on('setActivePlayer', ({ activePlayerId }) => {
     // console.log({activePlayerId});
     io.emit('activePlayer', activePlayerId);
+  });
+};
+
+const userHasLeftTheRoom = (socket) => {
+  socket.on('userLeft', ({ userId, roomname }) => {
+    console.log({ userId, roomname });
+    // remove room
   });
 };
 

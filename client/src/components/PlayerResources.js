@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components/macro';
 import { resourceColorMap } from '../utils';
-// import usePreviousState from '../hooks/usePreviousState';
+import { turnDelay } from './battlefield';
+import usePreviousState from '../hooks/usePreviousState';
 
 import cardIcons from '../assets/cardIcons';
 
@@ -17,13 +18,32 @@ const startingUpdated = {
 };
 
 const PlayerResources = ({ player, isActivePlayer, resources, castleHealth, gateHealth, id }) => {
-  const [updated] = useState(startingUpdated);
+  const [updated, setUpdated] = useState(startingUpdated);
   // stores the previous resources to know which one changed to show in the ui
-  // const prevResources = usePreviousState(resources);
+  const prevResources = usePreviousState({ ...resources, castleHealth, gateHealth });
 
-  // const resetUpdates = () => setUpdated(startingUpdated);
+  const resetUpdates = () => setUpdated(startingUpdated);
 
-  // TODO: need to add updating steps and timeouts
+  // // TODO: need to add updating steps and timeouts
+  // useEffect(() => {
+  //   if (prevResources) {
+  //     const getDiff = (newValue, oldValue) =>
+  //       newValue > oldValue ? `+ ${newValue - oldValue}` : `- ${oldValue - newValue}`;
+
+  //     if (castleHealth !== prevResources.castleHealth) {
+  //       console.log('castle health is diff', { castleHealth, prevCastleHealth: prevResources.castleHealth });
+  //       console.log('diff', getDiff(castleHealth, prevResources.castleHealth));
+  //       setUpdated({ ...updated, castleHealth: getDiff(castleHealth, prevResources.castleHealth) });
+  //     } else if (gateHealth !== prevResources.gateHealth) {
+  //       console.log('gate health is diff', { gateHealth, prevGateHealth: prevResources.gateHealth });
+  //       console.log('diff', getDiff(gateHealth, prevResources.gateHealth));
+  //       setUpdated({ ...updated, gateHealth: getDiff(gateHealth, prevResources.gateHealth) });
+  //     }
+  //     // setTimeout(() => {
+  //     //   resetUpdates();
+  //     // }, turnDelay);
+  //   }
+  // }, [resources]);
 
   return (
     <Resources $isPlayerOne={id === 0} $isActivePlayer={isActivePlayer}>
@@ -80,7 +100,7 @@ const PlayerResources = ({ player, isActivePlayer, resources, castleHealth, gate
         <ResourceDetails>
           <ResourceIcon src={cardIcons['gate']} />
           <ResourceType>Gate</ResourceType>
-          {updated.gateHealth !== '' && <ResourceUpdates>{updated.gate}</ResourceUpdates>}
+          {updated.gateHealth !== '' && <ResourceUpdates>{updated.gateHealth}</ResourceUpdates>}
           <div>{gateHealth}</div>
         </ResourceDetails>
       </ResourceBlock>

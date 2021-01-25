@@ -9,16 +9,26 @@ const Card = ({ card, resources }) => {
   const cantUse = useMemo(() => card.cost > resources, [resources, card.cost]);
   const isCrushType = useMemo(() => card.name.includes('crush'), [card.name]);
 
+  const cardName = useMemo(() => {
+    if (card.name.includes('crush')) {
+      let [, type] = card.name.split('crush');
+      return `crush ${type}`;
+    } else if (card.name.includes('conjure')) {
+      let [, type] = card.name.split('conjure');
+      return `conjure ${type}`;
+    } else {
+      return card.name;
+    }
+  }, [card.name]);
+
   return (
     <StyledCard onClick={() => onCardClick(card)} $type={card.type} $cantUse={cantUse}>
       <ResourceType src={icons[card.type]} />
       <Cost>{card.cost}</Cost>
       <Body>
-        <Name>{card.name}</Name>
+        <Name>{cardName}</Name>
         <Icon src={icons[card.name]} $isCrushType={isCrushType} />
-        <Description
-          dangerouslySetInnerHTML={{__html: card.description}}
-        />
+        <Description dangerouslySetInnerHTML={{ __html: card.description }} />
       </Body>
     </StyledCard>
   );
